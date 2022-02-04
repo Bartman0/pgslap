@@ -8,7 +8,7 @@ all: vet build
 
 .PHONY: build
 build:
-	go build -ldflags "-X main.version=$(VERSION)" ./cmd/pgslap
+	go build -ldflags "-X main.version=$(VERSION)" ./cmd/rsslap
 
 .PHONY: vet
 vet:
@@ -17,13 +17,13 @@ vet:
 .PHONY: package
 package: clean vet build
 ifeq ($(GOOS),windows)
-	zip pgslap_$(VERSION)_$(GOOS)_$(GOARCH).zip pgslap.exe
-	sha1sum pgslap_$(VERSION)_$(GOOS)_$(GOARCH).zip > pgslap_$(VERSION)_$(GOOS)_$(GOARCH).zip.sha1sum
+	zip rsslap_$(VERSION)_$(GOOS)_$(GOARCH).zip rsslap.exe
+	sha1sum rsslap_$(VERSION)_$(GOOS)_$(GOARCH).zip > rsslap_$(VERSION)_$(GOOS)_$(GOARCH).zip.sha1sum
 else
-	gzip pgslap -c > pgslap_$(VERSION)_$(GOOS)_$(GOARCH).gz
-	sha1sum pgslap_$(VERSION)_$(GOOS)_$(GOARCH).gz > pgslap_$(VERSION)_$(GOOS)_$(GOARCH).gz.sha1sum
+	gzip rsslap -c > rsslap_$(VERSION)_$(GOOS)_$(GOARCH).gz
+	sha1sum rsslap_$(VERSION)_$(GOOS)_$(GOARCH).gz > rsslap_$(VERSION)_$(GOOS)_$(GOARCH).gz.sha1sum
 endif
 
 .PHONY: clean
 clean:
-	rm -f pgslap pgslap.exe
+	rm -f rsslap rsslap.exe

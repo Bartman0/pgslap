@@ -1,4 +1,4 @@
-package pgslap
+package rsslap
 
 import (
 	"runtime"

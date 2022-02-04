@@ -1,11 +1,11 @@
 # pgslap
 
-pgslap is a PostgreSQL load testing tool like [mysqlslap](https://dev.mysql.com/doc/refman/8.0/en/mysqlslap.html).
+pgslap is a Redshift load testing tool like [mysqlslap](https://dev.mysql.com/doc/refman/8.0/en/mysqlslap.html).
 
 ## Usage
 
 ```
-pgslap - PostgreSQL load testing tool like mysqlslap.
+pgslap - Redshift load testing tool like mysqlslap.
 
   Flags:
        --version                               Displays the program version string.

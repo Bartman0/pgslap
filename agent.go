@@ -1,4 +1,4 @@
-package pgslap
+package rsslap
 
 import (
 	"context"
@@ -17,17 +17,17 @@ const (
 
 type Agent struct {
 	id       int
-	pgConfig *PgConfig
+	rsConfig *RsConfig
 	db       DB
 	taskOps  *TaskOpts
 	dataOpts *DataOpts
 	data     *Data
 }
 
-func newAgent(id int, pgCfg *PgConfig, taskOps *TaskOpts, dataOpts *DataOpts) (agent *Agent) {
+func newAgent(id int, pgCfg *RsConfig, taskOps *TaskOpts, dataOpts *DataOpts) (agent *Agent) {
 	agent = &Agent{
 		id:       id,
-		pgConfig: pgCfg,
+		rsConfig: pgCfg,
 		taskOps:  taskOps,
 		dataOpts: dataOpts,
 	}
@@ -36,10 +36,10 @@ func newAgent(id int, pgCfg *PgConfig, taskOps *TaskOpts, dataOpts *DataOpts) (a
 }
 
 func (agent *Agent) prepare(idList []string) error {
-	conn, err := agent.pgConfig.openAndPing()
+	conn, err := agent.rsConfig.openAndPing()
 
 	if err != nil {
-		dsn := agent.pgConfig.ConnString()
+		dsn := agent.rsConfig.ConnString()
 		return fmt.Errorf("Failed to open/ping DB (agent id=%d, dsn=%s): %w", agent.id, dsn, err)
 	}
 

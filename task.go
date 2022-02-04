@@ -1,4 +1,4 @@
-package pgslap
+package rsslap
 
 import (
 	"context"
@@ -18,7 +18,7 @@ const (
 )
 
 type TaskOpts struct {
-	PgConfig               *PgConfig `json:"-"`
+	RsConfig               *RsConfig `json:"-"`
 	NAgents                int
 	Time                   time.Duration `json:"-"`
 	Rate                   int
@@ -50,7 +50,7 @@ func NewTask(taskOpts *TaskOpts, dataOpts *DataOpts, recOpts *RecorderOpts) (tas
 	agents := make([]*Agent, taskOpts.NAgents)
 
 	for i := 0; i < taskOpts.NAgents; i++ {
-		agents[i] = newAgent(i, taskOpts.PgConfig, taskOpts, dataOpts)
+		agents[i] = newAgent(i, taskOpts.RsConfig, taskOpts, dataOpts)
 	}
 
 	task = &Task{
@@ -80,7 +80,7 @@ func (task *Task) Prepare() error {
 }
 
 func (task *Task) createDatabase() error {
-	newCfg := task.PgConfig.Copy()
+	newCfg := task.RsConfig.Copy()
 	conn, err := newCfg.openAndPing()
 
 	if err != nil {
@@ -90,14 +90,14 @@ func (task *Task) createDatabase() error {
 	defer conn.Close(context.Background())
 
 	if task.DropExistingDatabase {
-		_, err = conn.Exec(context.Background(), fmt.Sprintf("DROP DATABASE IF EXISTS `%s`", task.PgConfig.Database))
+		_, err = conn.Exec(context.Background(), fmt.Sprintf("DROP DATABASE IF EXISTS `%s`", task.RsConfig.Database))
 
 		if err != nil {
 			return fmt.Errorf("Drop database error: %w", err)
 		}
 	}
 
-	row := conn.QueryRow(context.Background(), "SELECT COUNT(*) FROM pg_database WHERE datname = $1", task.PgConfig.Database)
+	row := conn.QueryRow(context.Background(), "SELECT COUNT(*) FROM pg_database WHERE datname = $1", task.RsConfig.Database)
 	var dbCnt int
 
 	if _, ok := conn.(*NullDB); ok {
@@ -112,7 +112,7 @@ func (task *Task) createDatabase() error {
 	}
 
 	if dbCnt < 1 {
-		_, err = conn.Exec(context.Background(), fmt.Sprintf(`CREATE DATABASE "%s"`, task.PgConfig.Database))
+		_, err = conn.Exec(context.Background(), fmt.Sprintf(`CREATE DATABASE "%s"`, task.RsConfig.Database))
 
 		if err != nil {
 			return fmt.Errorf("Create database error: %w", err)
@@ -132,7 +132,7 @@ func (task *Task) setupDB() ([]string, error) {
 			return nil, err
 		}
 
-		conn, err := task.PgConfig.openAndPing()
+		conn, err := task.RsConfig.openAndPing()
 
 		if err != nil {
 			return nil, fmt.Errorf("Connection error: %w", err)
@@ -214,7 +214,7 @@ func (task *Task) prePopulateData(ctx context.Context) *errgroup.Group {
 	for i := 0; i < task.NAgents; i++ {
 		eg.Go(func() error {
 			data := newData(task.dataOpts, nil)
-			conn, err := task.PgConfig.openAndPing()
+			conn, err := task.RsConfig.openAndPing()
 
 			if err != nil {
 				return fmt.Errorf("Connection error: %w", err)
@@ -332,7 +332,7 @@ func (task *Task) Close() error {
 
 func (task *Task) teardownDB() error {
 	if !task.NoDropDatabase && !task.UseExistingDatabase {
-		newCfg := task.PgConfig.Copy()
+		newCfg := task.RsConfig.Copy()
 		conn, err := newCfg.openAndPing()
 
 		if err != nil {
@@ -340,7 +340,7 @@ func (task *Task) teardownDB() error {
 		}
 
 		defer conn.Close(context.Background())
-		_, err = conn.Exec(context.Background(), fmt.Sprintf(`DROP DATABASE "%s"`, task.PgConfig.Database))
+		_, err = conn.Exec(context.Background(), fmt.Sprintf(`DROP DATABASE "%s"`, task.RsConfig.Database))
 
 		if err != nil {
 			return fmt.Errorf("Drop database error: %w", err)

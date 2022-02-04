@@ -1,4 +1,4 @@
-package pgslap
+package rsslap
 
 import (
 	"fmt"
@@ -37,20 +37,23 @@ type DataOpts struct {
 
 type Data struct {
 	*DataOpts
-	randSrc   rand.Source
-	idList    []string
-	idIdx     int
-	mixedIdx  int
-	commitCnt int
-	committed bool
-	queryIdx  int
+	randSrc     rand.Source
+	idList      []string
+	idIdx       int
+	mixedIdx    int
+	commitCnt   int
+	committed   bool
+	queryIdx    int
+	shuffleList []int
 }
 
 func newData(opts *DataOpts, idList []string) (data *Data) {
+	shuffleList := rand.Perm(len(opts.Queries))
 	data = &Data{
-		DataOpts: opts,
-		randSrc:  rand.NewSource(time.Now().UnixNano()),
-		idList:   idList,
+		DataOpts:    opts,
+		randSrc:     rand.NewSource(time.Now().UnixNano()),
+		idList:      idList,
+		shuffleList: shuffleList,
 	}
 
 	return
@@ -87,7 +90,7 @@ func (data *Data) next() (string, []interface{}) {
 	}
 
 	if len(data.Queries) > 0 {
-		q := data.Queries[data.queryIdx]
+		q := data.Queries[data.shuffleList[data.queryIdx]]
 		data.queryIdx++
 
 		if data.queryIdx == len(data.Queries) {

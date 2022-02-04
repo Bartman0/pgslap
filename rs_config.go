@@ -1,4 +1,4 @@
-package pgslap
+package rsslap
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"github.com/jackc/pgx/v4"
 )
 
-type PgConfig struct {
+type RsConfig struct {
 	*pgx.ConnConfig
 	OnlyPrint bool
 }
@@ -19,7 +19,7 @@ type DB interface {
 	Close(ctx context.Context) error
 }
 
-func (pgCfg *PgConfig) openAndPing() (DB, error) {
+func (pgCfg *RsConfig) openAndPing() (DB, error) {
 	if pgCfg.OnlyPrint {
 		return &NullDB{}, nil
 	}
@@ -39,8 +39,8 @@ func (pgCfg *PgConfig) openAndPing() (DB, error) {
 	return conn, nil
 }
 
-func (pgCfg *PgConfig) Copy() *PgConfig {
-	return &PgConfig{
+func (pgCfg *RsConfig) Copy() *RsConfig {
+	return &RsConfig{
 		ConnConfig: pgCfg.ConnConfig.Copy(),
 		OnlyPrint:  pgCfg.OnlyPrint,
 	}

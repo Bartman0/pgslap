@@ -1,5 +1,5 @@
-/pgslap
-/pgslap.exe
+/rsslap
+/rsslap.exe
 *.gz
 *.zip
 *.sha1sum

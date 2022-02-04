@@ -1,4 +1,4 @@
-module pgslap
+module rsslap
 
 go 1.16
 

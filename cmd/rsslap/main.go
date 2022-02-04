@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"pgslap"
+	"rsslap"
 )
 
 func main() {
 	flags := parseFlags()
 	_ = flags
-	task := pgslap.NewTask(&flags.TaskOpts, &flags.DataOpts, &flags.RecorderOpts)
+	task := rsslap.NewTask(&flags.TaskOpts, &flags.DataOpts, &flags.RecorderOpts)
 
 	err := task.Prepare()
 

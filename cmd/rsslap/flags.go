@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"pgslap"
+	"rsslap"
 	"strconv"
 	"strings"
 	"time"
@@ -17,9 +17,9 @@ var version string
 
 const (
 	DefaultTime                   = 60
-	DefaultDBName                 = "pgslap"
+	DefaultDBName                 = "rsslap"
 	DefaultNumberPrePopulatedData = 100
-	DefaultLoadType               = string(pgslap.LoadTypeMixed)
+	DefaultLoadType               = string(rsslap.LoadTypeMixed)
 	DefaultNumberIntCols          = 1
 	DefaultNumberCharCols         = 1
 	DefaultDelimiter              = ";"
@@ -28,9 +28,9 @@ const (
 )
 
 type Flags struct {
-	pgslap.TaskOpts
-	pgslap.DataOpts
-	pgslap.RecorderOpts
+	rsslap.TaskOpts
+	rsslap.DataOpts
+	rsslap.RecorderOpts
 }
 
 func parseFlags() (flags *Flags) {
@@ -101,7 +101,7 @@ func parseFlags() (flags *Flags) {
 		pgCfg.Database = DefaultDBName
 	}
 
-	flags.PgConfig = &pgslap.PgConfig{
+	flags.RsConfig = &rsslap.RsConfig{
 		ConnConfig: pgCfg,
 		OnlyPrint:  flags.OnlyPrint,
 	}
@@ -185,20 +185,20 @@ func parseFlags() (flags *Flags) {
 	}
 
 	// LoadType
-	loadType := pgslap.AutoGenerateSqlLoadType(strLoadType)
+	loadType := rsslap.AutoGenerateSqlLoadType(strLoadType)
 
-	if loadType != pgslap.LoadTypeMixed &&
-		loadType != pgslap.LoadTypeUpdate &&
-		loadType != pgslap.LoadTypeWrite &&
-		loadType != pgslap.LoadTypeKey &&
-		loadType != pgslap.LoadTypeRead {
+	if loadType != rsslap.LoadTypeMixed &&
+		loadType != rsslap.LoadTypeUpdate &&
+		loadType != rsslap.LoadTypeWrite &&
+		loadType != rsslap.LoadTypeKey &&
+		loadType != rsslap.LoadTypeRead {
 		printErrorAndExit("Invalid load type: " + strLoadType)
 	}
 
-	if flags.NumberPrePopulatedData == 0 && (loadType == pgslap.LoadTypeMixed ||
-		loadType == pgslap.LoadTypeUpdate ||
-		loadType == pgslap.LoadTypeKey ||
-		loadType == pgslap.LoadTypeRead) {
+	if flags.NumberPrePopulatedData == 0 && (loadType == rsslap.LoadTypeMixed ||
+		loadType == rsslap.LoadTypeUpdate ||
+		loadType == rsslap.LoadTypeKey ||
+		loadType == rsslap.LoadTypeRead) {
 		printErrorAndExit("Pre-populated data is required for 'mixed', 'update', 'key', and 'read'")
 	}
 
