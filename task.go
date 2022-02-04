@@ -22,6 +22,8 @@ type TaskOpts struct {
 	NAgents                int
 	Time                   time.Duration `json:"-"`
 	Rate                   int
+	Delay                  int
+	Spread                 int
 	AutoGenerateSql        bool
 	NumberPrePopulatedData int
 	NumberQueriesToExecute int
@@ -79,7 +81,6 @@ func (task *Task) Prepare() error {
 
 func (task *Task) createDatabase() error {
 	newCfg := task.PgConfig.Copy()
-	newCfg.Database = "postgres"
 	conn, err := newCfg.openAndPing()
 
 	if err != nil {
@@ -124,84 +125,87 @@ func (task *Task) createDatabase() error {
 }
 
 func (task *Task) setupDB() ([]string, error) {
-	err := task.createDatabase()
+	if task.AutoGenerateSql {
+		err := task.createDatabase()
 
-	if err != nil {
-		return nil, err
-	}
+		if err != nil {
+			return nil, err
+		}
 
-	conn, err := task.PgConfig.openAndPing()
+		conn, err := task.PgConfig.openAndPing()
 
-	if err != nil {
-		return nil, fmt.Errorf("Connection error: %w", err)
-	}
+		if err != nil {
+			return nil, fmt.Errorf("Connection error: %w", err)
+		}
 
-	defer conn.Close(context.Background())
+		defer conn.Close(context.Background())
 
-	if len(task.Creates) > 0 {
-		for _, stmt := range task.Creates {
-			_, err = conn.Exec(context.Background(), stmt)
+		if len(task.Creates) > 0 {
+			for _, stmt := range task.Creates {
+				_, err = conn.Exec(context.Background(), stmt)
+
+				if err != nil {
+					return nil, fmt.Errorf("Create table error (query=%s): %w", stmt, err)
+				}
+			}
+
+			return []string{}, nil
+		}
+
+		_, err = conn.Exec(context.Background(), "DROP TABLE IF EXISTS "+AutoGenerateTableName)
+
+		if err != nil {
+			return nil, fmt.Errorf("Drop table error: %w", err)
+		}
+
+		tblStmt, idxStmts := newData(task.dataOpts, nil).buildCreateTableStmt()
+		_, err = conn.Exec(context.Background(), tblStmt)
+
+		if err != nil {
+			return nil, fmt.Errorf("Create table error (query=%s): %w", tblStmt, err)
+		}
+
+		for _, idxStmt := range idxStmts {
+			_, err = conn.Exec(context.Background(), idxStmt)
 
 			if err != nil {
-				return nil, fmt.Errorf("Create table error (query=%s): %w", stmt, err)
+				return nil, fmt.Errorf("Create index error (query=%s): %w", idxStmt, err)
 			}
 		}
 
-		return []string{}, nil
-	}
-
-	_, err = conn.Exec(context.Background(), "DROP TABLE IF EXISTS "+AutoGenerateTableName)
-
-	if err != nil {
-		return nil, fmt.Errorf("Drop table error: %w", err)
-	}
-
-	tblStmt, idxStmts := newData(task.dataOpts, nil).buildCreateTableStmt()
-	_, err = conn.Exec(context.Background(), tblStmt)
-
-	if err != nil {
-		return nil, fmt.Errorf("Create table error (query=%s): %w", tblStmt, err)
-	}
-
-	for _, idxStmt := range idxStmts {
-		_, err = conn.Exec(context.Background(), idxStmt)
+		ctxWithoutCancel := context.Background()
+		ctx, cancel := context.WithCancel(ctxWithoutCancel)
+		eg := task.prePopulateData(ctx)
+		task.trapSigint(ctx, cancel, eg)
+		err = eg.Wait()
+		cancel()
 
 		if err != nil {
-			return nil, fmt.Errorf("Create index error (query=%s): %w", idxStmt, err)
+			return nil, fmt.Errorf("Pre-populate data error: %w", err)
 		}
-	}
 
-	ctxWithoutCancel := context.Background()
-	ctx, cancel := context.WithCancel(ctxWithoutCancel)
-	eg := task.prePopulateData(ctx)
-	task.trapSigint(ctx, cancel, eg)
-	err = eg.Wait()
-	cancel()
+		idList := make([]string, task.NumberPrePopulatedData*task.NAgents)
+		rs, err := conn.Query(context.Background(), "SELECT id::text FROM t1")
 
-	if err != nil {
-		return nil, fmt.Errorf("Pre-populate data error: %w", err)
-	}
+		if _, ok := conn.(*NullDB); ok {
+			return idList, nil
+		}
 
-	idList := make([]string, task.NumberPrePopulatedData*task.NAgents)
-	rs, err := conn.Query(context.Background(), "SELECT id::text FROM t1")
+		if err != nil {
+			return nil, fmt.Errorf("Fetch id error: %w", err)
+		}
 
-	if _, ok := conn.(*NullDB); ok {
+		for i := 0; rs.Next(); i++ {
+			err = rs.Scan(&idList[i])
+
+			if err != nil {
+				return nil, fmt.Errorf("Scan id error: %w", err)
+			}
+		}
+
 		return idList, nil
 	}
-
-	if err != nil {
-		return nil, fmt.Errorf("Ftech id error: %w", err)
-	}
-
-	for i := 0; rs.Next(); i++ {
-		err = rs.Scan(&idList[i])
-
-		if err != nil {
-			return nil, fmt.Errorf("Scan id error: %w", err)
-		}
-	}
-
-	return idList, nil
+	return nil, nil
 }
 
 func (task *Task) prePopulateData(ctx context.Context) *errgroup.Group {
@@ -249,7 +253,7 @@ func (task *Task) Run() (*Recorder, error) {
 			err := agent.close()
 
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "[WARN] Failed to cloge Agent: %s", err)
+				fmt.Fprintf(os.Stderr, "[WARN] Failed to close Agent: %s", err)
 			}
 		}
 	}()
@@ -329,7 +333,6 @@ func (task *Task) Close() error {
 func (task *Task) teardownDB() error {
 	if !task.NoDropDatabase && !task.UseExistingDatabase {
 		newCfg := task.PgConfig.Copy()
-		newCfg.Database = "postgres"
 		conn, err := newCfg.openAndPing()
 
 		if err != nil {

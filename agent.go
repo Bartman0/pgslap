@@ -67,7 +67,7 @@ func (agent *Agent) run(ctx context.Context, recorder *Recorder) error {
 	defer recordTick.Stop()
 	recDps := []recorderDataPoint{}
 
-	err := loopWithThrottle(agent.taskOps.Rate, func(i int) (bool, error) {
+	err := loopWithThrottle(agent.taskOps.Rate, agent.taskOps.Delay, agent.taskOps.Spread, func(i int) (bool, error) {
 		if agent.taskOps.NumberQueriesToExecute > 0 && i >= agent.taskOps.NumberQueriesToExecute {
 			return false, nil
 		}

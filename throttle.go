@@ -1,12 +1,15 @@
 package pgslap
 
-import "time"
+import (
+	"math/rand"
+	"time"
+)
 
 const (
 	ThrottleInterrupt = 1 * time.Millisecond
 )
 
-func loopWithThrottle(rate int, proc func(i int) (bool, error)) error {
+func loopWithThrottle(rate int, delay int, spread int, proc func(i int) (bool, error)) error {
 	orgLimit := time.Duration(0)
 
 	if rate > 0 {
@@ -48,7 +51,14 @@ func loopWithThrottle(rate int, proc func(i int) (bool, error)) error {
 		}
 
 		blockEnd := time.Now()
-		time.Sleep(currLimit - blockEnd.Sub(blockStart))
+		if delay == 0 {
+			time.Sleep(currLimit - blockEnd.Sub(blockStart))
+		} else {
+			delayFloat := float64(delay)
+			spreadFloat := float64(spread)
+			randomDelay := delayFloat + spreadFloat*(2*rand.NormFloat64()-1)
+			time.Sleep(time.Duration(randomDelay) * time.Second)
+		}
 		blockStart = time.Now()
 	}
 }

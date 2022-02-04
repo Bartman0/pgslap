@@ -23,6 +23,8 @@ const (
 	DefaultNumberIntCols          = 1
 	DefaultNumberCharCols         = 1
 	DefaultDelimiter              = ";"
+	DefaultHInterval              = "0"
+	DefaultSpread                 = 0
 )
 
 type Flags struct {
@@ -33,7 +35,7 @@ type Flags struct {
 
 func parseFlags() (flags *Flags) {
 	flaggy.SetVersion(version)
-	flaggy.SetDescription("PostgreSQL load testing tool like mysqlslap.")
+	flaggy.SetDescription("Redshift load testing tool like mysqlslap.")
 	flags = &Flags{}
 	var url string
 	flaggy.String(&url, "u", "url", "Database URL, e.g. 'postgres://username:password@localhost:5432'.")
@@ -43,10 +45,13 @@ func parseFlags() (flags *Flags) {
 	flaggy.Int(&argTime, "t", "time", "Test run time (sec). Zero is infinity.")
 	flaggy.Int(&flags.NumberQueriesToExecute, "", "number-queries", "Number of queries to execute per agent. Zero is infinity.")
 	flaggy.Int(&flags.Rate, "r", "rate", "Rate limit for each agent (qps). Zero is unlimited.")
+	flaggy.Int(&flags.Delay, "d", "delay", "Delay in seconds to put between agents queries. (either rate or delay can be specified)")
+	flags.Spread = DefaultSpread
+	flaggy.Int(&flags.Spread, "s", "spread", "Spread of delay for randomized interval times. (default 0)")
 	flaggy.Bool(&flags.AutoGenerateSql, "a", "auto-generate-sql", "Automatically generate SQL to execute.")
 	flaggy.Bool(&flags.GuidPrimary, "", "auto-generate-sql-guid-primary", "Use GUID as the primary key of the table to be created.")
 	var queries string
-	flaggy.String(&queries, "q", "query", "SQL to execute. (file or string)")
+	flaggy.String(&queries, "q", "query", "SQL to execute. (file or string with one or more queries)")
 	flags.NumberPrePopulatedData = DefaultNumberPrePopulatedData
 	flaggy.Int(&flags.NumberPrePopulatedData, "", "auto-generate-sql-write-number", "Number of rows to be pre-populated for each agent.")
 	strLoadType := DefaultLoadType
@@ -67,7 +72,7 @@ func parseFlags() (flags *Flags) {
 	flaggy.String(&creates, "", "create", "SQL for creating custom tables. (file or string)")
 	flaggy.Bool(&flags.DropExistingDatabase, "", "drop-db", "Forcibly delete the existing DB.")
 	flaggy.Bool(&flags.NoDropDatabase, "", "no-drop", "Do not drop database after testing.")
-	hinterval := "0"
+	hinterval := DefaultHInterval
 	flaggy.String(&hinterval, "", "hinterval", "Histogram interval, e.g. '100ms'.")
 	delimiter := DefaultDelimiter
 	flaggy.String(&delimiter, "F", "delimiter", "SQL statements delimiter.")
@@ -121,6 +126,11 @@ func parseFlags() (flags *Flags) {
 	// Rate
 	if flags.Rate < 0 {
 		printErrorAndExit("'--rate(-r)' must be >= 0")
+	}
+
+	// Delay and Spread
+	if flags.Rate > 0 && flags.Delay > 0 {
+		printErrorAndExit("Cannot set both '--rate(-r)' and '--delay(-d)'")
 	}
 
 	// Delimiter
