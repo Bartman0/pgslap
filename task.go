@@ -360,9 +360,9 @@ func (task *Task) printProgress(execCnt int, prevExecCnt int, taskStart time.Tim
 		panic("Failed to get terminal width: " + err.Error())
 	}
 
-	elapsedTimeSec := elapsedTime.Round(time.Second)
-	min := elapsedTimeSec / time.Minute
-	sec := (elapsedTimeSec - min*time.Minute) / time.Second
+	elapsedTimeRounded := elapsedTime.Round(time.Second)
+	min := elapsedTimeRounded / time.Minute
+	sec := (elapsedTimeRounded - min*time.Minute) / time.Second
 	progressLine := fmt.Sprintf("%02d:%02d | %d agents / run %d queries (%.0f qps)", min, sec, numRunAgents, execCnt, qps)
 	fmt.Fprintf(os.Stderr, "\r%-*s", termWidth, progressLine)
 }
