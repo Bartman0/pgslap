@@ -1,6 +1,7 @@
 package rsslap
 
 import (
+	"math"
 	"math/rand"
 	"time"
 )
@@ -56,7 +57,7 @@ func loopWithThrottle(rate int, delay int, spread int, proc func(i int) (bool, e
 		} else {
 			delayFloat := float64(delay)
 			spreadFloat := float64(spread)
-			randomDelay := delayFloat + spreadFloat*(2*rand.NormFloat64()-1)
+			randomDelay := math.Max(delayFloat+spreadFloat*(2*rand.NormFloat64()-1), 0)
 			time.Sleep(time.Duration(randomDelay) * time.Second)
 		}
 		blockStart = time.Now()
