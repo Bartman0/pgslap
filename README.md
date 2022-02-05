@@ -1,11 +1,11 @@
-# pgslap
+# rsslap
 
-pgslap is a Redshift load testing tool like [mysqlslap](https://dev.mysql.com/doc/refman/8.0/en/mysqlslap.html).
+rsslap is a Redshift load testing tool like [mysqlslap](https://dev.mysql.com/doc/refman/8.0/en/mysqlslap.html).
 
 ## Usage
 
 ```
-pgslap - Redshift load testing tool like mysqlslap.
+rsslap - Redshift load testing tool like mysqlslap.
 
   Flags:
        --version                               Displays the program version string.
@@ -38,7 +38,7 @@ pgslap - Redshift load testing tool like mysqlslap.
 ```
 
 ```
-$ pgslap -u 'postgres://scott@localhost:5432' -n 10 -r 100 -t 10 -a -l mixed -x 3 -y 3
+$ rsslap -u 'postgres://scott@localhost:5432' -n 10 -r 100 -t 10 -a -l mixed -x 3 -y 3
 00:10 | 10 agents / run 9090 queries (1010 qps)
 
 {
@@ -133,7 +133,7 @@ $ pgslap -u 'postgres://scott@localhost:5432' -n 10 -r 100 -t 10 -a -l mixed -x 
 ## Use Custom Query
 
 ```
-pgslap -u 'postgres://scott@localhost:5432' \
+rsslap -u 'postgres://scott@localhost:5432' \
   --create 'create table test (id int); insert into test values (1)' \
   -q 'select id from test; select count(id) from test'
 ```
