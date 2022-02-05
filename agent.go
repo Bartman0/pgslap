@@ -40,7 +40,7 @@ func (agent *Agent) prepare(idList []string) error {
 
 	if err != nil {
 		dsn := agent.rsConfig.ConnString()
-		return fmt.Errorf("Failed to open/ping DB (agent id=%d, dsn=%s): %w", agent.id, dsn, err)
+		return fmt.Errorf("failed to open/ping DB (agent id=%d, dsn=%s): %w", agent.id, dsn, err)
 	}
 
 	agent.db = conn
@@ -55,7 +55,7 @@ func (agent *Agent) prepare(idList []string) error {
 		_, err = conn.Exec(context.Background(), stmt)
 
 		if err != nil {
-			return fmt.Errorf("Failed to execute initial query (agent id=%d, query=%s): %w", agent.id, stmt, err)
+			return fmt.Errorf("failed to execute initial query (agent id=%d, query=%s): %w", agent.id, stmt, err)
 		}
 	}
 
@@ -86,7 +86,7 @@ func (agent *Agent) run(ctx context.Context, recorder *Recorder) error {
 		rt, err := agent.query(ctx, q, args...)
 
 		if err != nil {
-			return false, fmt.Errorf("Execute query error (query=%s, args=%v): %w", q, args, err)
+			return false, fmt.Errorf("execute query error (query=%s, args=%v): %w", q, args, err)
 		}
 
 		recDps = append(recDps, recorderDataPoint{
@@ -98,8 +98,12 @@ func (agent *Agent) run(ctx context.Context, recorder *Recorder) error {
 	})
 
 	if err != nil {
-		return fmt.Errorf("Failed to transact (agent id=%d): %w", agent.id, err)
+		return fmt.Errorf("failed to transact (agent id=%d): %w", agent.id, err)
 	}
+
+	// at least record what we have at the end of the loop
+	recorder.add(recDps)
+	recDps = recDps[:0]
 
 	return nil
 }
@@ -108,7 +112,7 @@ func (agent *Agent) close() error {
 	err := agent.db.Close(context.Background())
 
 	if err != nil {
-		return fmt.Errorf("Failed to close DB (agent id=%d): %w", agent.id, err)
+		return fmt.Errorf("failed to close DB (agent id=%d): %w", agent.id, err)
 	}
 
 	return nil
