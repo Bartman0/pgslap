@@ -3,6 +3,7 @@ package rsslap
 import (
 	"context"
 	"fmt"
+	"math"
 	"math/rand"
 	"os"
 	"os/signal"
@@ -67,12 +68,12 @@ func (task *Task) Prepare() error {
 	idList, err := task.setupDB()
 
 	if err != nil {
-		return fmt.Errorf("Failed to setup DB: %w", err)
+		return fmt.Errorf("failed to setup DB: %w", err)
 	}
 
 	for _, agent := range task.agents {
 		if err := agent.prepare(idList); err != nil {
-			return fmt.Errorf("Failed to prepare Agent: %w", err)
+			return fmt.Errorf("failed to prepare Agent: %w", err)
 		}
 	}
 
@@ -84,7 +85,7 @@ func (task *Task) createDatabase() error {
 	conn, err := newCfg.openAndPing()
 
 	if err != nil {
-		return fmt.Errorf("Connection error: %w", err)
+		return fmt.Errorf("connection error: %w", err)
 	}
 
 	defer conn.Close(context.Background())
@@ -93,7 +94,7 @@ func (task *Task) createDatabase() error {
 		_, err = conn.Exec(context.Background(), fmt.Sprintf("DROP DATABASE IF EXISTS `%s`", task.RsConfig.Database))
 
 		if err != nil {
-			return fmt.Errorf("Drop database error: %w", err)
+			return fmt.Errorf("drop database error: %w", err)
 		}
 	}
 
@@ -108,14 +109,14 @@ func (task *Task) createDatabase() error {
 	}
 
 	if err != nil {
-		return fmt.Errorf("Database existence check error: %w", err)
+		return fmt.Errorf("database existence check error: %w", err)
 	}
 
 	if dbCnt < 1 {
 		_, err = conn.Exec(context.Background(), fmt.Sprintf(`CREATE DATABASE "%s"`, task.RsConfig.Database))
 
 		if err != nil {
-			return fmt.Errorf("Create database error: %w", err)
+			return fmt.Errorf("create database error: %w", err)
 		}
 	} else {
 		task.UseExistingDatabase = true
@@ -135,7 +136,7 @@ func (task *Task) setupDB() ([]string, error) {
 		conn, err := task.RsConfig.openAndPing()
 
 		if err != nil {
-			return nil, fmt.Errorf("Connection error: %w", err)
+			return nil, fmt.Errorf("connection error: %w", err)
 		}
 
 		defer conn.Close(context.Background())
@@ -145,7 +146,7 @@ func (task *Task) setupDB() ([]string, error) {
 				_, err = conn.Exec(context.Background(), stmt)
 
 				if err != nil {
-					return nil, fmt.Errorf("Create table error (query=%s): %w", stmt, err)
+					return nil, fmt.Errorf("create table error (query=%s): %w", stmt, err)
 				}
 			}
 
@@ -155,21 +156,21 @@ func (task *Task) setupDB() ([]string, error) {
 		_, err = conn.Exec(context.Background(), "DROP TABLE IF EXISTS "+AutoGenerateTableName)
 
 		if err != nil {
-			return nil, fmt.Errorf("Drop table error: %w", err)
+			return nil, fmt.Errorf("drop table error: %w", err)
 		}
 
 		tblStmt, idxStmts := newData(task.dataOpts, nil).buildCreateTableStmt()
 		_, err = conn.Exec(context.Background(), tblStmt)
 
 		if err != nil {
-			return nil, fmt.Errorf("Create table error (query=%s): %w", tblStmt, err)
+			return nil, fmt.Errorf("create table error (query=%s): %w", tblStmt, err)
 		}
 
 		for _, idxStmt := range idxStmts {
 			_, err = conn.Exec(context.Background(), idxStmt)
 
 			if err != nil {
-				return nil, fmt.Errorf("Create index error (query=%s): %w", idxStmt, err)
+				return nil, fmt.Errorf("create index error (query=%s): %w", idxStmt, err)
 			}
 		}
 
@@ -181,7 +182,7 @@ func (task *Task) setupDB() ([]string, error) {
 		cancel()
 
 		if err != nil {
-			return nil, fmt.Errorf("Pre-populate data error: %w", err)
+			return nil, fmt.Errorf("pre-populate data error: %w", err)
 		}
 
 		idList := make([]string, task.NumberPrePopulatedData*task.NAgents)
@@ -192,14 +193,14 @@ func (task *Task) setupDB() ([]string, error) {
 		}
 
 		if err != nil {
-			return nil, fmt.Errorf("Fetch id error: %w", err)
+			return nil, fmt.Errorf("fetch id error: %w", err)
 		}
 
 		for i := 0; rs.Next(); i++ {
 			err = rs.Scan(&idList[i])
 
 			if err != nil {
-				return nil, fmt.Errorf("Scan id error: %w", err)
+				return nil, fmt.Errorf("scan id error: %w", err)
 			}
 		}
 
@@ -217,7 +218,7 @@ func (task *Task) prePopulateData(ctx context.Context) *errgroup.Group {
 			conn, err := task.RsConfig.openAndPing()
 
 			if err != nil {
-				return fmt.Errorf("Connection error: %w", err)
+				return fmt.Errorf("connection error: %w", err)
 			}
 
 			defer conn.Close(ctx)
@@ -231,7 +232,7 @@ func (task *Task) prePopulateData(ctx context.Context) *errgroup.Group {
 					_, err = conn.Exec(ctx, insStmt, args...)
 
 					if err != nil {
-						return fmt.Errorf("Insert error (query=%s, args=%v): %w", insStmt, args, err)
+						return fmt.Errorf("insert error (query=%s, args=%v): %w", insStmt, args, err)
 					}
 				}
 			}
@@ -247,8 +248,6 @@ func (task *Task) Run() (*Recorder, error) {
 	rec := newRecorder(task.recOpts, task.TaskOpts, task.dataOpts)
 
 	defer func() {
-		rec.close()
-
 		for _, agent := range task.agents {
 			err := agent.close()
 
@@ -256,12 +255,13 @@ func (task *Task) Run() (*Recorder, error) {
 				fmt.Fprintf(os.Stderr, "[WARN] Failed to close Agent: %s", err)
 			}
 		}
+		rec.close()
 	}()
 
 	eg, ctxWithoutCancel := errgroup.WithContext(context.Background())
 	ctx, cancel := context.WithCancel(ctxWithoutCancel)
 	progressTick := time.NewTicker(ProgressReportPeriod * time.Second)
-	rec.start(task.NAgents * 3)
+	rec.start(task.NAgents * int(math.Max(float64(task.NumberQueriesToExecute), 3)))
 	var numTermAgents int32
 
 	// Variables for progress line
@@ -320,7 +320,7 @@ func (task *Task) Run() (*Recorder, error) {
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("Error during agent running: %w", err)
+		return nil, fmt.Errorf("error during agent running: %w", err)
 	}
 
 	return rec, nil
@@ -336,14 +336,14 @@ func (task *Task) teardownDB() error {
 		conn, err := newCfg.openAndPing()
 
 		if err != nil {
-			return fmt.Errorf("Connection error: %w", err)
+			return fmt.Errorf("connection error: %w", err)
 		}
 
 		defer conn.Close(context.Background())
 		_, err = conn.Exec(context.Background(), fmt.Sprintf(`DROP DATABASE "%s"`, task.RsConfig.Database))
 
 		if err != nil {
-			return fmt.Errorf("Drop database error: %w", err)
+			return fmt.Errorf("drop database error: %w", err)
 		}
 	}
 
