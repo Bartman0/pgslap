@@ -5,3 +5,4 @@
 *.sha1sum
 *.sql
 *.xlsx
+results*
